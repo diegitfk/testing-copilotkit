@@ -1,17 +1,16 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import "@copilotkit/react-ui/styles.css";
-import {
-  CopilotKit,
-  useFrontendTool,
-} from "@copilotkit/react-core";
 import { CopilotChat } from "@copilotkit/react-ui";
-import {Chat} from "@/components/testing/Chat"
-
-
+import { NewChat } from "@/components/testing/NewChat";
+import { useCustomToolRender } from "@/components/tools/ToolRender";
 export default function AgenticChat() {
+  // Register custom tool renders so CopilotChat can use them
+  useCustomToolRender();
   return (
-      <Chat />
+    <div className="h-screen w-full flex flex-col">
+      <NewChat />
+    </div>
   );
 };
 

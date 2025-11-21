@@ -8,6 +8,8 @@ import OpenAI from "openai";
 import { NextRequest } from "next/server";
 import { Client } from "@langchain/langgraph-sdk";
 
+let serviceAdapter: OpenAIAdapter;
+
 export const POST = async (req: NextRequest) => {
   try {
     // Validar OPENAI_API_KEY
@@ -55,25 +57,32 @@ export const POST = async (req: NextRequest) => {
     console.log("[CopilotKit] LangGraph client configured for:", "http://localhost:80/api/agents");
     console.log("[CopilotKit] Thread ID from frontend:", threadId || "Not provided");
 
-    // Configurar OpenAI adapter para features adicionales (sugerencias, etc)
-    const openai = new OpenAI({ 
-      apiKey: process.env.OPENAI_API_KEY
-    });
-    
-    console.log("[CopilotKit] OpenAI client initialized ✓");
-    
-    const serviceAdapter = new OpenAIAdapter({ 
-      openai: openai as any,
-      model: "gpt-4o-mini"
-    });
+    // Configurar OpenAI adapter para features adicionales (Singleton)
+    if (!serviceAdapter) {
+      const openai = new OpenAI({ 
+        apiKey: process.env.OPENAI_API_KEY
+      });
+      
+      serviceAdapter = new OpenAIAdapter({ 
+        openai: openai as any,
+        model: "gpt-4o-mini"
+      });
+      console.log("[CopilotKit] OpenAI adapter initialized ✓");
+    }
 
     // Crear runtime con el agente configurado
+    // NOTA: CopilotRuntime se recrea por request para inyectar el cliente de LangGraph con los headers de autorización del usuario
     const runtime = new CopilotRuntime({
       agents: {
         'prodmentor_workflow': new LangGraphAgent({
           deploymentUrl: "http://localhost:80/api/agents",
           client: langgraphClient as any,
           graphId: 'prodmentor_workflow',
+        }),
+        'fast_assistant_sale': new LangGraphAgent({
+          deploymentUrl: "http://localhost:80/api/agents",
+          client: langgraphClient as any,
+          graphId: 'fast_assistant_sale',
         })
       },
     });

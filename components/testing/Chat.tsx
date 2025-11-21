@@ -27,7 +27,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useReasoningToolRenderer } from '@/components/reasoning/ReasoningToolRenderer';
 import { useDefaultToolRenderer } from '@/components/reasoning/DefaultToolRenderer';
-
+import { useCustomToolRender } from '@/components/tools/ToolRender';
 // Tipo que coincide EXACTAMENTE con ProdmentorAssistantState de Python
 // La estructura viene de las tools call_agent_web_research y call_agent_knowledge_research
 type ResearchResultItem = {
@@ -90,23 +90,26 @@ export function Chat() {
     // Los tool calls quedan automáticamente respaldados en el thread    
     // Hook para renderizar TODAS las demás tool calls que no tienen renderer específico
     // Actúa como "catch-all" para debugging y visualización de tools genéricas
-    useReasoningToolRenderer()
-    useDefaultToolRenderer();
-
+    useCustomToolRender();
     // Auto-scroll al final cuando hay nuevos mensajes
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages]);
 
     // Handler para enviar mensajes
-    const handleSend = () => {
+    const handleSend = async () => {
         if (input.trim() && !isLoading) {
-            sendMessage({
-                id: Date.now().toString(),
-                role: "user",
-                content: input,
-            });
-            setInput("");
+            try {
+                await sendMessage({
+                    id: Date.now().toString(),
+                    role: "user",
+                    content: input,
+                });
+                setInput("");
+            } catch (error) {
+                console.error("Error sending message:", error);
+                // Aquí podrías añadir una notificación de error (toast)
+            }
         }
     };
 
@@ -119,8 +122,11 @@ export function Chat() {
     };
 
     // Verificar si hay research results para mostrar el panel lateral
-    const hasResearchResults = (state.web_research_results && Object.keys(state.web_research_results).length > 0) ||
-                               (state.knowledge_research_results && Object.keys(state.knowledge_research_results).length > 0);
+    // Memoizado y con acceso seguro a state
+    const hasResearchResults = state && (
+        (state.web_research_results && Object.keys(state.web_research_results).length > 0) ||
+        (state.knowledge_research_results && Object.keys(state.knowledge_research_results).length > 0)
+    );
 
     return (
         <div className="flex h-screen">
@@ -137,7 +143,7 @@ export function Chat() {
                     <ScrollArea className="flex-1 p-4">
                         <div className="space-y-4">
                             {/* Web Research Results */}
-                            {state.web_research_results && Object.keys(state.web_research_results).length > 0 && (
+                            {state?.web_research_results && Object.keys(state.web_research_results).length > 0 && (
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <Badge variant="default">🌐 Web Research</Badge>
@@ -201,7 +207,7 @@ export function Chat() {
                             )}
                             
                             {/* Knowledge Research Results */}
-                            {state.knowledge_research_results && Object.keys(state.knowledge_research_results).length > 0 && (
+                            {state?.knowledge_research_results && Object.keys(state.knowledge_research_results).length > 0 && (
                                 <div>
                                     <div className="flex items-center gap-2 mb-3">
                                         <Badge variant="secondary">📚 Knowledge Research</Badge>
